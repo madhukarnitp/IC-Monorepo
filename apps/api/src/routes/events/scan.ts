@@ -188,136 +188,37 @@ export async function scanVoteRoutes(app: FastifyInstance) {
         });
       }
 
-      // ── Process Scan Directly & Apply 30s Cold Period ────
-      const scanTimestamp = new Date();
-      const COOLDOWN_MS = 30_000;
-      const cooldownExpiresAt = new Date(scanTimestamp.getTime() + COOLDOWN_MS);
-
-      try {
-        const result = await prisma.$transaction(async (tx) => {
-          // Verify quantity inside transaction
-          const freshResource = await tx.eventResource.findUnique({
-            where: { id: resource.id },
-            select: { id: true, name: true, description: true, type: true, quantity: true, quantityUsed: true },
-          });
-
-          if (!freshResource || freshResource.quantityUsed >= freshResource.quantity) {
-            throw new Error("RESOURCE_DEPLETED");
-          }
-
-          const existing = await tx.eventTeamResource.findUnique({
-            where: { teamId_resourceId: { teamId: team.id, resourceId: resource.id } },
-          });
-          if (existing) throw new Error("ALREADY_CLAIMED");
-
-          // 1. Increment quantityUsed
-          await tx.eventResource.update({
-            where: { id: resource.id },
-            data: { quantityUsed: { increment: 1 } },
-          });
-
-          // 2. Add team resource record
-          const teamResource = await tx.eventTeamResource.create({
-            data: {
-              teamId: team.id,
-              resourceId: resource.id,
-              unlockedAt: scanTimestamp,
-            },
-            include: { resource: { select: { name: true, description: true, type: true } } },
-          });
-
-          // 3. Record scan log with scan timestamp (createdAt) and accept timestamp (resolvedAt)
-          const voteSession = await tx.resourceScanVote.create({
-            data: {
-              teamId: team.id,
-              resourceId: resource.id,
-              eventId,
-              initiatedBy: user.id,
-              status: "ACCEPTED",
-              createdAt: scanTimestamp,    // Team scan timestamp
-              resolvedAt: scanTimestamp,   // Accept timestamp
-              expiresAt: cooldownExpiresAt,
-            },
-          });
-
-          // 4. Set 30s team cold period
-          await tx.teamScanCooldown.upsert({
-            where: { teamId: team.id },
-            create: {
-              teamId: team.id,
-              expiresAt: cooldownExpiresAt,
-              reason: `Resource ${resource.name} claimed by team`,
-            },
-            update: {
-              expiresAt: cooldownExpiresAt,
-              reason: `Resource ${resource.name} claimed by team`,
-            },
-          });
-
-          return { teamResource, voteSession };
-        });
-
-        return reply.send({
-          resolved: true,
-          outcome: "ACCEPTED",
-          scannedAt: scanTimestamp,
-          resolvedAt: scanTimestamp,
-          cooldownSeconds: 30,
-          cooldownExpiresAt,
-          resourceUnlocked: {
-            id: result.teamResource.resourceId,
-            name: result.teamResource.resource.name,
-            description: result.teamResource.resource.description,
-            type: result.teamResource.resource.type,
-            unlockedAt: result.teamResource.unlockedAt,
+      // ── Create Vote Session (Phase 1) ──────────────────────
+      const voteExpiresAt = new Date(Date.now() + VOTE_WINDOW_MS);
+      const session = await prisma.resourceScanVote.create({
+        data: {
+          teamId: team.id,
+          resourceId: resource.id,
+          eventId,
+          initiatedBy: user.id,
+          status: "PENDING",
+          expiresAt: voteExpiresAt,
+          votes: {
+            create: team.members.map((member) => ({
+              userId: member.participant.user.id,
+              vote: "PENDING",
+              votedAt: null,
+            })),
           },
-          message: "Scan accepted! Resource claimed and 30s cold period started.",
-        });
-      } catch (err: any) {
-        const rejectTimestamp = new Date();
+        },
+        include: {
+          votes: true,
+          resource: true,
+        },
+      });
 
-        // Record rejected scan record & apply 30s cold period
-        await prisma.resourceScanVote.create({
-          data: {
-            teamId: team.id,
-            resourceId: resource.id,
-            eventId,
-            initiatedBy: user.id,
-            status: "DECLINED",
-            createdAt: scanTimestamp,     // Team scan timestamp
-            resolvedAt: rejectTimestamp,  // Reject timestamp
-            expiresAt: cooldownExpiresAt,
-          },
-        }).catch(() => {});
-
-        await prisma.teamScanCooldown.upsert({
-          where: { teamId: team.id },
-          create: {
-            teamId: team.id,
-            expiresAt: cooldownExpiresAt,
-            reason: err.message === "RESOURCE_DEPLETED" ? "Resource out of stock" : "Scan rejected",
-          },
-          update: {
-            expiresAt: cooldownExpiresAt,
-            reason: err.message === "RESOURCE_DEPLETED" ? "Resource out of stock" : "Scan rejected",
-          },
-        }).catch(() => {});
-
-        const msg = err.message === "RESOURCE_DEPLETED"
-          ? "Resource is out of stock"
-          : err.message === "ALREADY_CLAIMED"
-          ? "Your team has already claimed this resource"
-          : err.message || "Scan failed";
-
-        return reply.status(400).send({
-          error: err.message || "SCAN_REJECTED",
-          message: msg,
-          scannedAt: scanTimestamp,
-          resolvedAt: rejectTimestamp,
-          cooldownExpiresAt,
-          secondsLeft: 30,
-        });
-      }
+      return reply.send({
+        resolved: false,
+        outcome: "PENDING",
+        voteSessionId: session.id,
+        expiresAt: session.expiresAt,
+        message: "Scan initiated! Please accept or reject the resource.",
+      });
     }
   );
 

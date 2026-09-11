@@ -36,7 +36,7 @@ type CooldownInfo = {
   secondsLeft: number;
 };
 
-type Phase = "SCAN" | "VOTING" | "COOLDOWN" | "SUCCESS" | "FAILED";
+type Phase = "SCAN" | "CONFIRMATION" | "COOLDOWN" | "SUCCESS" | "FAILED";
 
 // ── Avatar ─────────────────────────────────────────────────
 function MiniAvatar({ name, vote }: { name: string; vote: string }) {
@@ -169,8 +169,8 @@ export default function ScanPage() {
 
       if (data.activeSession) {
         setActiveSession(data.activeSession);
-        setPhase("VOTING");
-      } else if (phaseRef.current === "VOTING") {
+        setPhase("CONFIRMATION");
+      } else if (phaseRef.current === "CONFIRMATION") {
         // Session resolved externally — check for success
         setPhase("SCAN");
         setActiveSession(null);
@@ -302,6 +302,32 @@ export default function ScanPage() {
     }
   };
 
+  const submitVote = async (voteValue: "ACCEPTED" | "DECLINED") => {
+    if (!activeSession) return;
+    setVoteSubmitting(voteValue);
+
+    try {
+      const res = await fetch(`${getApiUrl()}/events/${eventId}/scan/scan-votes/${activeSession.id}/respond`, {
+        method: "POST",
+        headers: getAuthHeaders(),
+        credentials: "include",
+        body: JSON.stringify({ vote: voteValue }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        console.error(data.error);
+      }
+
+      setVoted(true);
+      await pollSession();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setVoteSubmitting(null);
+    }
+  };
+
   const resetToScan = () => {
     setPhase("SCAN");
     setError(null);
@@ -348,6 +374,77 @@ export default function ScanPage() {
             <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
           </div>
           <p className="text-indigo-400 font-medium">Verifying QR code...</p>
+        </div>
+      )}
+
+      {/* ── CONFIRMATION PHASE ── */}
+      {phase === "CONFIRMATION" && activeSession && (
+        <div className="text-center py-4 space-y-6 animate-in fade-in duration-300">
+          <div className="w-16 h-16 rounded-full bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center mx-auto shadow-[0_0_30px_rgba(234,179,8,0.15)]">
+            <Package className="w-8 h-8 text-yellow-400" />
+          </div>
+          
+          <div>
+            <h3 className="text-2xl font-black text-white">Resource Found!</h3>
+            <p className="text-gray-400 text-sm mt-1">Accept to claim it for your team.</p>
+          </div>
+
+          <div className="bg-white/5 border border-white/10 rounded-2xl p-5 text-left space-y-2">
+            <div className="text-xs text-yellow-400/70 font-mono uppercase tracking-wider">Pending Resource</div>
+            <div className="text-xl font-bold text-white">{activeSession.resource.name}</div>
+            {activeSession.resource.description && (
+              <p className="text-sm text-gray-400">{activeSession.resource.description}</p>
+            )}
+          </div>
+
+          {/* Member Votes */}
+          <div className="pt-4 border-t border-white/10">
+            <div className="flex items-center justify-center gap-2 mb-4 text-xs font-mono text-gray-400">
+              <Users className="w-3.5 h-3.5" />
+              Team Consensus
+            </div>
+            <div className="flex flex-wrap justify-center gap-4">
+              {activeSession.votes.map((v: any) => (
+                <MiniAvatar key={v.userId} name={v.user.name} vote={v.vote} />
+              ))}
+            </div>
+          </div>
+
+          <Countdown
+            expiresAt={activeSession.expiresAt}
+            onExpire={() => pollSession()}
+          />
+
+          {!activeSession.myVote || activeSession.myVote === "PENDING" ? (
+            <div className="flex gap-3 pt-2">
+              <button
+                disabled={!!voteSubmitting}
+                onClick={() => submitVote("DECLINED")}
+                className="flex-1 py-3.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm font-bold hover:bg-red-500/20 transition-all disabled:opacity-50"
+              >
+                {voteSubmitting === "DECLINED" ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Reject"}
+              </button>
+              <button
+                disabled={!!voteSubmitting}
+                onClick={() => submitVote("ACCEPTED")}
+                className="flex-1 py-3.5 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 text-black text-sm font-bold hover:opacity-90 transition-all disabled:opacity-50 shadow-[0_0_20px_rgba(34,197,94,0.3)]"
+              >
+                {voteSubmitting === "ACCEPTED" ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Accept"}
+              </button>
+            </div>
+          ) : (
+            <div className="py-4 bg-white/5 rounded-xl border border-white/10 text-sm font-medium text-gray-300">
+              {activeSession.myVote === "ACCEPTED" ? (
+                <div className="flex items-center justify-center gap-2 text-green-400">
+                  <CheckCircle2 className="w-4 h-4" /> You accepted. Waiting for others...
+                </div>
+              ) : (
+                <div className="flex items-center justify-center gap-2 text-red-400">
+                  <XCircle className="w-4 h-4" /> You rejected.
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
