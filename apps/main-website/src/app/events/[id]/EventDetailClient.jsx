@@ -5,6 +5,7 @@ import Image from 'next/image';
 import GlassCard from '@/components/ui/GlassCard';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
+import EventSponsorsSection from '@/components/sections/EventSponsorsSection';
 import { getOptimizedCloudinaryUrl } from '@/utils/cloudinary';
 import {
   CalendarIcon,
@@ -136,6 +137,9 @@ export default function EventDetailClient({ event }) {
               </div>
             </GlassCard>
           )}
+
+          {/* Event Sponsors & Partners Section */}
+          <EventSponsorsSection sponsors={event.sponsors} />
 
           {event.eligibility && (
             <GlassCard className="p-6 rounded-3xl border border-[#0ef]/30 bg-[#0ef]/5" hoverEffect={false}>
