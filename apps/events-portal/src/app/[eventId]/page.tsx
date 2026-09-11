@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { fetchApi } from "../../lib/api";
 import Link from "next/link";
-import { Trophy, CheckCircle, Target, BookOpen } from "lucide-react";
+import { Trophy, CheckCircle, Target, BookOpen, Users, UserPlus, Sparkles } from "lucide-react";
 
 export default function ParticipantDashboard() {
   const { eventId } = useParams() as { eventId: string };
@@ -27,12 +27,44 @@ export default function ParticipantDashboard() {
   }, [eventId]);
 
   if (loading) return <div className="py-20 text-center text-cyan-400 animate-pulse font-mono">Loading dashboard...</div>;
-  if (error) return (
-    <div className="bg-red-500/10 text-red-400 p-6 rounded-2xl border border-red-500/20 backdrop-blur-md">
-      <h3 className="font-semibold text-lg mb-2 flex items-center gap-2"><Target className="w-5 h-5" /> Access Denied</h3>
-      <p>{error}</p>
-    </div>
-  );
+  if (error) {
+    const isNoTeam = error.includes("Participant not found") || error.includes("No team found");
+    if (isNoTeam) {
+      return (
+        <div className="max-w-xl mx-auto my-12 p-8 bg-zinc-900/60 border border-cyan-500/30 rounded-3xl backdrop-blur-xl text-center space-y-6 shadow-[0_0_50px_rgba(6,182,212,0.1)] relative overflow-hidden animate-in fade-in zoom-in-95 duration-300">
+          <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-cyan-500/50 to-transparent"></div>
+          
+          <div className="w-16 h-16 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center mx-auto text-cyan-400 shadow-[0_0_20px_rgba(6,182,212,0.2)]">
+            <Users className="w-8 h-8" />
+          </div>
+
+          <div>
+            <h2 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight">Join the Event Arena</h2>
+            <p className="text-zinc-400 text-sm mt-3 leading-relaxed">
+              You are logged in and ready to participate! To access team checkpoints, view resources, and submit projects, you must create or join a team first.
+            </p>
+          </div>
+
+          <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Link
+              href={`/${eventId}/register`}
+              className="w-full sm:w-auto px-8 py-3.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-bold rounded-2xl shadow-[0_0_30px_rgba(6,182,212,0.3)] transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2"
+            >
+              <UserPlus className="w-5 h-5" />
+              Create or Join Team
+            </Link>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="bg-red-500/10 text-red-400 p-6 rounded-2xl border border-red-500/20 backdrop-blur-md">
+        <h3 className="font-semibold text-lg mb-2 flex items-center gap-2"><Target className="w-5 h-5" /> Error Loading Dashboard</h3>
+        <p>{error}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">

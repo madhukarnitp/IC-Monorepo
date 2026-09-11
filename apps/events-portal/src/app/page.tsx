@@ -2,6 +2,7 @@ import React from "react";
 import { DashboardNavbar } from "../components/DashboardNavbar";
 import { DashboardFooter } from "../components/DashboardFooter";
 import { GamifiedEventCard, EventType } from "../components/GamifiedEventCard";
+import { ParticipantAuthGuard } from "../components/ParticipantAuthGuard";
 import { Sparkles, Activity, Crosshair, Archive } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -37,8 +38,9 @@ export default async function Home() {
   const upcomingEvents = events.filter(e => !activeStatuses.includes(e.status) && !pastStatuses.includes(e.status));
 
   return (
-    <div className="min-h-screen bg-black text-white font-sans selection:bg-purple-500/30">
-      <DashboardNavbar />
+    <ParticipantAuthGuard>
+      <div className="min-h-screen bg-black text-white font-sans selection:bg-purple-500/30">
+        <DashboardNavbar />
       
       <main className="container mx-auto px-4 pt-12 pb-24">
         {/* Dashboard Header */}
@@ -126,6 +128,7 @@ export default async function Home() {
       </main>
 
       <DashboardFooter />
-    </div>
+      </div>
+    </ParticipantAuthGuard>
   );
 }

@@ -47,15 +47,8 @@ export async function customRoutes(app: FastifyInstance) {
 
   app.post("/set-password", async (request, reply) => {
     try {
-      // Create Web Headers from Fastify headers
-      const webHeaders = new Headers();
-      for (const [key, value] of Object.entries(request.headers)) {
-        if (typeof value === "string") {
-          webHeaders.append(key, value);
-        } else if (Array.isArray(value)) {
-          value.forEach((v) => webHeaders.append(key, v));
-        }
-      }
+      // Parse Fastify headers efficiently for BetterAuth
+      const webHeaders = new Headers(request.headers as Record<string, string>);
 
       const session = await auth.api.getSession({
         headers: webHeaders,

@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { requireAuth } from "../../middleware/auth";
+import { requireAdmin } from "../../middleware/adminAuth";
 import { prisma } from "@repo/database";
 import { randomBytes, createHash } from "crypto";
 
@@ -20,7 +21,7 @@ const createResourceSchema = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
   type: z.string().min(1),
-  content: z.record(z.any()).optional(),
+  content: z.record(z.string(), z.any()).optional(),
 });
 
 const createCheckpointSchema = z.object({
@@ -28,20 +29,13 @@ const createCheckpointSchema = z.object({
   name: z.string().optional(),
   type: z.enum(["QR", "CODE", "NFC", "LOCATION", "MANUAL", "CUSTOM"]),
   points: z.number().int().default(0),
-  config: z.record(z.any()).optional(),
+  config: z.record(z.string(), z.any()).optional(),
 });
 
 export async function adminRoutes(app: FastifyInstance) {
   // Enforce admin privileges for all routes in this plugin
-  // RBAC checks (to be added)
   app.addHook("preHandler", requireAuth);
-  app.addHook("preHandler", async (request, reply) => {
-    // Basic global admin check placeholder
-    const user = (request as any).user;
-    if (!user) {
-      return reply.status(401).send({ error: "Unauthorized" });
-    }
-  });
+  app.addHook("preHandler", requireAdmin);
   
   // Event Management
   app.get("/events", async (request, reply) => {
@@ -68,11 +62,15 @@ export async function adminRoutes(app: FastifyInstance) {
     const body = createEventSchema.partial().safeParse(request.body);
     if (!body.success) return reply.status(400).send({ error: body.error.flatten() });
 
-    const event = await prisma.event.update({
-      where: { id },
-      data: body.data,
-    });
-    return reply.send({ event });
+    try {
+      const event = await prisma.event.update({
+        where: { id },
+        data: body.data,
+      });
+      return reply.send({ event });
+    } catch (err: any) {
+      return reply.status(400).send({ error: err.message });
+    }
   });
 
   // Team Management
@@ -102,16 +100,20 @@ export async function adminRoutes(app: FastifyInstance) {
     const body = createResourceSchema.safeParse(request.body);
     if (!body.success) return reply.status(400).send({ error: body.error.flatten() });
 
-    const resource = await prisma.eventResource.create({
-      data: {
-        eventId,
-        name: body.data.name,
-        description: body.data.description,
-        type: body.data.type,
-        content: body.data.content || {},
-      },
-    });
-    return reply.send({ resource });
+    try {
+      const resource = await prisma.eventResource.create({
+        data: {
+          eventId,
+          name: body.data.name,
+          description: body.data.description,
+          type: body.data.type,
+          content: (body.data.content as any) || {},
+        },
+      });
+      return reply.send({ resource });
+    } catch (err: any) {
+      return reply.status(400).send({ error: err.message });
+    }
   });
 
   // Checkpoint Management
@@ -128,7 +130,7 @@ export async function adminRoutes(app: FastifyInstance) {
           name: body.data.name,
           type: body.data.type,
           points: body.data.points,
-          config: body.data.config || {},
+          config: (body.data.config as any) || {},
         },
       });
       return reply.send({ checkpoint });

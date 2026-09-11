@@ -45,6 +45,7 @@ model User {
   eventStaffRoles     EventStaff[]
   eventScans          EventScan[]
   eventSubmissions    EventSubmission[]
+  scanVoteEntries     ResourceScanVoteEntry[]
 
   @@map("user")
 }
@@ -469,6 +470,8 @@ model EventTeam {
   resources     EventTeamResource[]
   submissions   EventSubmission[]
   joinRequests  TeamJoinRequest[]
+  scanVotes     ResourceScanVote[]
+  cooldown      TeamScanCooldown?
 
   @@unique([eventId, name])
   @@index([eventId])
@@ -508,24 +511,32 @@ model EventStaff {
 
 
 model EventResource {
-  id          String @id @default(uuid())
+  id           String @id @default(uuid())
 
-  eventId     String
+  eventId      String
 
-  name        String
-  description String?
-  type        String
+  name         String
+  description  String?
+  type         String
 
-  content     Json?
+  content      Json?
 
-  active      Boolean @default(true)
+  active       Boolean @default(true)
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  // Quantity tracking
+  quantity     Int     @default(1)  // total units available
+  quantityUsed Int     @default(0)  // units already claimed
+
+  // HMAC secret for QR signing (server-only, never sent to client)
+  hmacSecret   String?
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
 
-  teamResources EventTeamResource[]
+  teamResources    EventTeamResource[]
+  scanVotes        ResourceScanVote[]
 
   @@index([eventId])
 }
@@ -659,4 +670,70 @@ model TeamJoinRequest {
   @@unique([teamId, participantId])
   @@index([teamId])
   @@index([participantId])
+}
+
+// ==========================================
+// TEAM CONSENSUS SCAN VOTING
+// ==========================================
+
+// A vote session created when a team member initiates a QR scan
+model ResourceScanVote {
+  id          String   @id @default(uuid())
+
+  teamId      String
+  resourceId  String
+  eventId     String
+
+  initiatedBy String   // userId of the member who scanned
+
+  // PENDING | ACCEPTED | DECLINED | EXPIRED
+  status      String   @default("PENDING")
+
+  expiresAt   DateTime
+  resolvedAt  DateTime?
+
+  createdAt   DateTime @default(now())
+
+  team     EventTeam     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  resource EventResource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  votes ResourceScanVoteEntry[]
+
+  @@index([teamId])
+  @@index([resourceId])
+  @@index([status])
+}
+
+// Each member's individual vote within a session
+model ResourceScanVoteEntry {
+  id        String   @id @default(uuid())
+
+  sessionId String
+  userId    String
+
+  // PENDING | ACCEPTED | DECLINED
+  vote      String   @default("PENDING")
+
+  votedAt   DateTime?
+
+  session ResourceScanVote @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user    User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, userId])
+  @@index([sessionId])
+}
+
+// Cooldown lock per team after a decline
+model TeamScanCooldown {
+  id        String   @id @default(uuid())
+
+  teamId    String   @unique
+  expiresAt DateTime
+  reason    String?  // who declined / why
+
+  createdAt DateTime @default(now())
+
+  team EventTeam @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
 }

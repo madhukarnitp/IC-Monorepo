@@ -71,6 +71,16 @@ export async function usersRoutes(app: FastifyInstance) {
     });
   });
 
+  // GET /api/users/me/roles - roles only (used by admin login for role check)
+  app.get("/me/roles", { preHandler: [requireAuth] }, async (request, reply) => {
+    const user = (request as any).user;
+    const [roles, authorization] = await Promise.all([
+      roleService.getUserRoles(user.id),
+      permissionService.getAuthorizationContext(user.id),
+    ]);
+    return reply.send({ roles, isSuperAdmin: authorization.isSuperAdmin });
+  });
+
   // GET /api/users/me/sessions - list current user's active sessions
   app.get(
     "/me/sessions",
