@@ -7,7 +7,7 @@ import {
   Loader2, AlertCircle, FileSpreadsheet, RefreshCw, Zap, ChevronDown, Eye
 } from "lucide-react";
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4001/api";
+const API = process.env.NEXT_PUBLIC_API_URL as string;
 
 type Resource = {
   id: string;

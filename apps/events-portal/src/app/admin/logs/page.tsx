@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { ScrollText, Filter, Download, Clock, Users, Package, CheckCircle2, XCircle, Loader2, ChevronDown, ChevronRight } from "lucide-react";
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4001/api";
+const API = process.env.NEXT_PUBLIC_API_URL as string;
 
 type LogEntry = {
   id: string;

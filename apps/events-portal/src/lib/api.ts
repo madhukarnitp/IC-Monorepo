@@ -7,10 +7,10 @@ export function getApiUrl(): string {
     const protocol = window.location.protocol || "http:";
     return `${protocol}//${hostname}:4001/api`;
   }
-  return process.env.NEXT_PUBLIC_API_URL || "http://localhost:4001/api";
+  return process.env.NEXT_PUBLIC_API_URL as string;
 }
 
-export const API_BASE_URL = typeof window !== "undefined" ? getApiUrl() : (process.env.NEXT_PUBLIC_API_URL || "http://localhost:4001/api");
+export const API_BASE_URL = typeof window !== "undefined" ? getApiUrl() : (process.env.NEXT_PUBLIC_API_URL as string);
 
 export async function fetchApi(path: string, options: RequestInit = {}) {
   const url = `${getApiUrl()}${path}`;

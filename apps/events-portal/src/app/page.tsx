@@ -8,7 +8,7 @@ import { Sparkles, Activity, Crosshair, Archive } from "lucide-react";
 export const dynamic = "force-dynamic";
 
 async function getEvents(): Promise<EventType[]> {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL as string;
   try {
     const res = await fetch(`${apiUrl}/events`, { cache: "no-store" });
     if (!res.ok) throw new Error("API not ok");

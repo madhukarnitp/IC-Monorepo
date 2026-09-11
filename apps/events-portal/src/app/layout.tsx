@@ -12,7 +12,7 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const siteUrl = process.env.NEXT_PUBLIC_EVENTS_URL || "https://events.incubationcentre.nitp.ac.in";
+const siteUrl = process.env.NEXT_PUBLIC_EVENTS_URL as string;
 
 export const viewport: Viewport = {
   themeColor: "#000000",
@@ -22,7 +22,13 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  metadataBase: new URL(siteUrl),
+  metadataBase: (() => {
+    try {
+      return siteUrl ? new URL(siteUrl.startsWith("http") ? siteUrl : `https://${siteUrl}`) : null;
+    } catch {
+      return null;
+    }
+  })(),
   title: {
     default: "Events Portal | Incubation Centre NIT Patna",
     template: "%s | IC NIT Patna Events",

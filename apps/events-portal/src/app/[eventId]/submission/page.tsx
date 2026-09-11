@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { fetchApi } from "../../../lib/api";
+import { fetchApi } from "@/lib/api";
 import { CheckCircle, Save, Send } from "lucide-react";
 import Link from "next/link";
 
@@ -64,7 +64,7 @@ export default function StartupBuilderPage() {
 
   const handleSubmit = async () => {
     if (!confirm("Are you sure you want to submit? You will not be able to edit this afterward.")) return;
-    
+
     setSaving(true);
     try {
       // Auto save first
@@ -77,7 +77,7 @@ export default function StartupBuilderPage() {
       const res = await fetchApi(`/events/${eventId}/submission/submit`, {
         method: "POST",
       });
-      
+
       setStatus(res.submission.status);
       alert("Submission successful!");
       router.push(`/${eventId}`);
@@ -121,7 +121,7 @@ export default function StartupBuilderPage() {
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-3xl mx-auto">
       <div className="mb-4">
         <Link href={`/${eventId}`} className="inline-flex items-center gap-2 text-zinc-500 hover:text-cyan-400 transition-colors text-sm font-medium">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
           Back to Dashboard
         </Link>
       </div>
@@ -131,7 +131,7 @@ export default function StartupBuilderPage() {
           <h2 className="text-3xl md:text-4xl font-extrabold text-zinc-100 tracking-tight">Project Builder</h2>
           <p className="text-zinc-500 font-mono text-sm mt-2">Compile your resources into a final project.</p>
         </div>
-        
+
         {isSubmitted && (
           <div className="px-4 py-2 bg-green-500/10 border border-green-500/30 text-green-400 font-bold rounded-full flex items-center gap-2 shadow-[0_0_15px_rgba(74,222,128,0.1)]">
             <CheckCircle className="w-5 h-5" /> Submitted

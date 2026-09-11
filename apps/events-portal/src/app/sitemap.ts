@@ -1,9 +1,8 @@
 import type { MetadataRoute } from "next";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const siteUrl =
-    process.env.NEXT_PUBLIC_EVENTS_URL || "https://events.incubationcentre.nitp.ac.in";
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
+  const siteUrl = process.env.NEXT_PUBLIC_EVENTS_URL as string;
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL as string;
 
   const staticRoutes: MetadataRoute.Sitemap = [
     {

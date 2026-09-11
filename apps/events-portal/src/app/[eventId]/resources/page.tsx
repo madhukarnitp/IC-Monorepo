@@ -2,19 +2,19 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { fetchApi } from "../../../lib/api";
+import { fetchApi } from "@/lib/api";
 import { BookOpen, Lock, Unlock } from "lucide-react";
 import Link from "next/link";
 
 export default function ResourceInventoryPage() {
   const { eventId } = useParams() as { eventId: string };
-  
+
   const [resources, setResources] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-   
+
     fetchApi(`/events/${eventId}/team`)
       .then((data) => {
         setResources(data.team.resources || []);
@@ -57,7 +57,7 @@ export default function ResourceInventoryPage() {
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="mb-4">
         <Link href={`/${eventId}`} className="inline-flex items-center gap-2 text-zinc-500 hover:text-cyan-400 transition-colors text-sm font-medium">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
           Back to Dashboard
         </Link>
       </div>
@@ -92,7 +92,7 @@ export default function ResourceInventoryPage() {
                 </span>
                 <h3 className="text-xl font-bold text-zinc-100 mb-2">{tr.resource.name}</h3>
                 <p className="text-zinc-400 mb-6 leading-relaxed">{tr.resource.description}</p>
-                
+
                 <div className="text-xs text-zinc-500 font-mono">
                   Unlocked at {new Date(tr.unlockedAt).toLocaleString()}
                 </div>

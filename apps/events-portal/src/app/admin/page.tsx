@@ -15,7 +15,7 @@ import {
   Loader2,
 } from "lucide-react";
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
+const API = process.env.NEXT_PUBLIC_API_URL as string;
 
 type OverviewData = {
   stats: {
