@@ -89,7 +89,31 @@ export default function StartupBuilderPage() {
   };
 
   if (loading) return <div className="py-20 text-center animate-pulse">Loading builder...</div>;
-  if (error) return <div className="text-red-500 text-center py-10">{error}</div>;
+  if (error) {
+    const isNoTeam = error.includes("Participant not found") || error.includes("No team found");
+    if (isNoTeam) {
+      return (
+        <div className="max-w-xl mx-auto my-12 p-8 bg-zinc-900/60 border border-cyan-500/30 rounded-3xl backdrop-blur-xl text-center space-y-6 shadow-[0_0_50px_rgba(6,182,212,0.1)] relative overflow-hidden">
+          <div className="w-16 h-16 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center mx-auto text-cyan-400">
+            <CheckCircle className="w-8 h-8" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold text-white">Team Setup Required</h2>
+            <p className="text-zinc-400 text-sm mt-2">
+              You need to be part of a team to access the project builder and submit your entry.
+            </p>
+          </div>
+          <Link
+            href={`/${eventId}/register`}
+            className="inline-block px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-600 text-black font-bold rounded-2xl shadow-lg hover:opacity-90 transition-all"
+          >
+            Create or Join Team
+          </Link>
+        </div>
+      );
+    }
+    return <div className="text-red-500 text-center py-10">{error}</div>;
+  }
 
   const isSubmitted = status === "SUBMITTED";
 

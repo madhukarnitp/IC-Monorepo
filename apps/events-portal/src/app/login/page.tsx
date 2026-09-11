@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { authClient } from "../../authClient";
 import { ArrowRight, Lock, Mail, Loader2, Sparkles, User } from "lucide-react";
@@ -9,6 +9,7 @@ function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/";
+  const { data: session, isPending: sessionPending } = authClient.useSession();
 
   const [isSignUp, setIsSignUp] = useState(false);
   const [name, setName] = useState("");
@@ -16,6 +17,12 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!sessionPending && session) {
+      router.push(callbackUrl);
+    }
+  }, [sessionPending, session, callbackUrl, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,8 +62,12 @@ function LoginForm() {
     <div className="w-full max-w-md mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700">
       <div className="bg-white/80 backdrop-blur-xl p-8 md:p-10 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/20">
         <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-indigo-500 to-purple-500 mb-6 shadow-lg shadow-indigo-500/30">
-            <Sparkles className="w-8 h-8 text-white" />
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white shadow-md border border-gray-100 mb-6 p-2.5">
+            <img
+              src="/ic_logo.png"
+              alt="Incubation Centre NIT Patna"
+              className="w-full h-full object-contain"
+            />
           </div>
           <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">
             {isSignUp ? "Create Account" : "Welcome Back"}

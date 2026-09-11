@@ -32,12 +32,13 @@
     "sharp": "^0.35.2",
     "tsx": "^4.22.4",
     "uuid": "^10.0.0",
+    "xlsx": "^0.18.5",
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@repo/env": "workspace:^",
     "@repo/eslint-config": "workspace:^",
     "@repo/typescript-config": "workspace:^",
-    "@repo/env": "workspace:^",
     "@types/node": "^22",
     "tsup": "^8.0.0",
     "typescript": "^5"

@@ -38,43 +38,36 @@ export async function teamRoutes(app: FastifyInstance) {
         return reply.status(400).send({ error: "Team name is required" });
       }
 
-      // Ensure user is a participant
-      let participant = await prisma.eventParticipant.findUnique({
-        where: { eventId_userId: { eventId, userId: user.id } },
-      });
-
-      if (!participant) {
-        participant = await prisma.eventParticipant.create({
-          data: {
-            eventId,
-            userId: user.id,
-          },
-        });
-      }
-
       // Check if user is already in a team for this event
-      const existingMembership = await prisma.eventTeamMember.findUnique({
-        where: { participantId: participant.id },
+      const existingParticipant = await prisma.eventParticipant.findUnique({
+        where: { eventId_userId: { eventId, userId: user.id } },
+        include: { teamMemberships: true }
       });
 
-      if (existingMembership) {
+      if (existingParticipant && existingParticipant.teamMemberships.length > 0) {
         return reply.status(400).send({ error: "You are already in a team for this event" });
       }
 
       // Create Team and Member in a transaction
       try {
         const team = await prisma.$transaction(async (tx) => {
+          let participant = existingParticipant;
+          
+          if (!participant) {
+            participant = await tx.eventParticipant.create({
+              data: { eventId, userId: user.id },
+              include: { teamMemberships: true }
+            });
+          }
+
           const newTeam = await tx.eventTeam.create({
-            data: {
-              eventId,
-              name,
-            },
+            data: { eventId, name },
           });
 
           await tx.eventTeamMember.create({
             data: {
               teamId: newTeam.id,
-              participantId: participant!.id,
+              participantId: participant.id,
             },
           });
 
@@ -99,54 +92,58 @@ export async function teamRoutes(app: FastifyInstance) {
       const { eventId, teamId } = request.params as { eventId: string; teamId: string };
       const user = (request as any).user;
 
-      let participant = await prisma.eventParticipant.findUnique({
-        where: { eventId_userId: { eventId, userId: user.id } },
-      });
-
-      if (!participant) {
-        participant = await prisma.eventParticipant.create({
-          data: { eventId, userId: user.id },
-        });
-      }
-
       // Check if already in a team
-      const existingMembership = await prisma.eventTeamMember.findUnique({
-        where: { participantId: participant.id },
+      const existingParticipant = await prisma.eventParticipant.findUnique({
+        where: { eventId_userId: { eventId, userId: user.id } },
+        include: { teamMemberships: true }
       });
 
-      if (existingMembership) {
+      if (existingParticipant && existingParticipant.teamMemberships.length > 0) {
         return reply.status(400).send({ error: "You are already in a team for this event" });
       }
 
       // Check for existing pending request
-      const existingRequest = await prisma.teamJoinRequest.findUnique({
-        where: {
-          teamId_participantId: {
-            teamId,
-            participantId: participant.id,
+      if (existingParticipant) {
+        const existingRequest = await prisma.teamJoinRequest.findUnique({
+          where: {
+            teamId_participantId: {
+              teamId,
+              participantId: existingParticipant.id,
+            },
           },
-        },
-      });
+        });
 
-      if (existingRequest) {
-        if (existingRequest.status === "PENDING") {
-          return reply.status(400).send({ error: "You already have a pending request to join this team" });
-        } else if (existingRequest.status === "REJECTED") {
-          // Allow re-applying by updating status
-          const updatedRequest = await prisma.teamJoinRequest.update({
-            where: { id: existingRequest.id },
-            data: { status: "PENDING" },
-          });
-          return reply.send({ joinRequest: updatedRequest });
+        if (existingRequest) {
+          if (existingRequest.status === "PENDING") {
+            return reply.status(400).send({ error: "You already have a pending request to join this team" });
+          } else if (existingRequest.status === "REJECTED") {
+            // Allow re-applying by updating status
+            const updatedRequest = await prisma.teamJoinRequest.update({
+              where: { id: existingRequest.id },
+              data: { status: "PENDING" },
+            });
+            return reply.send({ joinRequest: updatedRequest });
+          }
         }
       }
 
-      const joinRequest = await prisma.teamJoinRequest.create({
-        data: {
-          teamId,
-          participantId: participant.id,
-          status: "PENDING",
-        },
+      const joinRequest = await prisma.$transaction(async (tx) => {
+        let participant = existingParticipant;
+        
+        if (!participant) {
+          participant = await tx.eventParticipant.create({
+            data: { eventId, userId: user.id },
+            include: { teamMemberships: true }
+          });
+        }
+        
+        return tx.teamJoinRequest.create({
+          data: {
+            teamId,
+            participantId: participant.id,
+            status: "PENDING",
+          },
+        });
       });
 
       return reply.send({ joinRequest });

@@ -4,7 +4,7 @@ import { requireAuth } from "../../middleware/auth";
 import { prisma } from "@repo/database";
 
 const saveSubmissionSchema = z.object({
-  data: z.record(z.any()),
+  data: z.record(z.string(), z.any()),
 });
 
 export async function submissionRoutes(app: FastifyInstance) {
@@ -39,7 +39,7 @@ export async function submissionRoutes(app: FastifyInstance) {
   // PUT /api/events/:eventId/submission - Save draft
   app.put(
     "/",
-    { preHandler: [requireAuth] },
+    { preHandler: [requireAuth], config: { rateLimit: { max: 15, timeWindow: '1 minute' } } },
     async (request, reply) => {
       const { eventId } = request.params as { eventId: string };
       const user = (request as any).user;
@@ -77,7 +77,7 @@ export async function submissionRoutes(app: FastifyInstance) {
       if (existing) {
         submission = await prisma.eventSubmission.update({
           where: { id: existing.id },
-          data: { data: body.data.data, submittedByUserId: user.id },
+          data: { data: body.data.data as any, submittedByUserId: user.id },
         });
       } else {
         submission = await prisma.eventSubmission.create({
@@ -85,7 +85,7 @@ export async function submissionRoutes(app: FastifyInstance) {
             eventId,
             teamId,
             submittedByUserId: user.id,
-            data: body.data.data,
+            data: body.data.data as any,
             status: "DRAFT",
           },
         });
@@ -98,7 +98,7 @@ export async function submissionRoutes(app: FastifyInstance) {
   // POST /api/events/:eventId/submission/submit - Finalize submission
   app.post(
     "/submit",
-    { preHandler: [requireAuth] },
+    { preHandler: [requireAuth], config: { rateLimit: { max: 5, timeWindow: '1 minute' } } },
     async (request, reply) => {
       const { eventId } = request.params as { eventId: string };
       const user = (request as any).user;
